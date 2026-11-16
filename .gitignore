@@ -1,0 +1,9 @@
+__pycache__/
+venv/
+.env
+tomita/tomitaparser.exe
+tomita/tomitaparser
+tomita/*.bin
+tomita/input.txt
+tomita/output.txt
+tomita/results.html

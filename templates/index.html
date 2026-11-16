@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Корпус новостей (Tomita Parser)</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>Архив новостей</h1>
+            <p>Учебный корпус - Tomita Parser</p>
+        </header>
+
+        <!-- Блок поиска и фильтров -->
+        <div class="search-panel">
+            <form action="/" method="GET" class="search-form">
+                <div class="search-row">
+                    <div class="input-group">
+                        <label>Запрос</label>
+                        <input type="text" name="q" value="{{ q }}" placeholder="Введите текст или лемму...">
+                    </div>
+                    <div class="input-group search-mode">
+                        <label>Искать</label>
+                        <select name="mode">
+                            <option value="text" {% if mode == 'text' %}selected{% endif %}>В тексте</option>
+                            <option value="lemma" {% if mode == 'lemma' %}selected{% endif %}>По лемме</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary">Найти статьи</button>
+                </div>
+                
+                <div class="filter-row">
+                    <div class="input-group">
+                        <label>Рубрика</label>
+                        <select name="category">
+                            <option value="">Все рубрики</option>
+                            {% for cat in categories %}
+                                <option value="{{ cat }}" {% if selected_cat == cat %}selected{% endif %}>{{ cat }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <!-- Сюда в будущем можно добавить фильтры по автору и дате -->
+                    <a href="/" class="btn-reset">Сбросить</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Выдача результатов (Карточки) -->
+        <div class="results-header">
+            <h2>Найдено статей: {{ articles|length }}</h2>
+        </div>
+
+        <div class="articles-list">
+            {% for article in articles %}
+            <div class="article-card">
+                <div class="card-meta">
+                    <span class="category-badge">{{ article.class_name }}</span>
+                    <span class="date">{{ article.pub_date }}</span>
+                    <span class="author">{{ article.author_name }}</span>
+                </div>
+                <h3 class="card-title">{{ article.title }}</h3>
+                <p class="card-snippet">{{ article.text[:200] }}...</p>
+                
+                <!-- Кнопка запуска Томиты (передает текст в JS функцию) -->
+                <button class="btn-tomita" onclick="runTomita(this)" data-text="{{ article.text }}">
+                    Анализировать в Tomita
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Модальное окно для результатов Томиты -->
+    <div id="tomitaModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2>Результаты Tomita Parser</h2>
+            <div id="tomitaResults">
+                <div class="loader">Анализируем текст...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Функция отправки текста в Flask без перезагрузки страницы
+        function runTomita(buttonElement) {
+            const textToAnalyze = buttonElement.getAttribute('data-text');
+            const modal = document.getElementById('tomitaModal');
+            const resultsDiv = document.getElementById('tomitaResults');
+            
+            // Показываем окно с загрузкой
+            modal.style.display = "block";
+            resultsDiv.innerHTML = '<div class="loader">Запуск Томита-парсера...</div>';
+
+            // Формируем POST запрос
+            const formData = new FormData();
+            formData.append('txt', textToAnalyze);
+
+            fetch('/extract', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(html => {
+                resultsDiv.innerHTML = html; // Вставляем результат
+            })
+            .catch(error => {
+                resultsDiv.innerHTML = `<div class='error'>Ошибка соединения: ${error}</div>`;
+            });
+        }
+
+        // Закрытие модального окна
+        function closeModal() {
+            document.getElementById('tomitaModal').style.display = "none";
+        }
+        
+        // Закрытие по клику вне окна
+        window.onclick = function(event) {
+            const modal = document.getElementById('tomitaModal');
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+    </script>
+</body>
+</html>
